@@ -4,7 +4,7 @@ comma    [,]
 digit    [0-9]
 number   {digit}+
 
-%s word
+%s 
 
 %%
 word     {printf("%s", word);}
