@@ -26,21 +26,8 @@ typedef struct {
   int natYear, attSch, read, write;
   char bPlace[30], lang[30], fPlace[30], fLang[30], mPlace[30], mLang[30];
   int eng;
-  char prof[30], ind[30], emp[30];
+  char prof[50], ind[50], emp[50];
 } person;
-
-typedef struct {
-  person people[10];
-  int count;
-  int fNumber;
-  char lName[50];
-} family;
-
-typedef struct {
-  family families[10];
-  int count;
-  int hNumber, dNumber;
-} house;
 
 typedef struct {
   char places[100][100];
@@ -49,18 +36,16 @@ typedef struct {
 } hMap;
 
 void putInBucket(char[], hMap *);
-
-void reaper(person *);
+void initPerson(person *);
 
 person p;
 person people[100];
 int pc = 0;
-int tHNum, tDNum, tFNum;
-char tLName[50];
 
 %}
 
 %%
+\"                   ;
 <INITIAL>{number}    p.line = atoi(yytext);
 <INITIAL>,           BEGIN(HNUMBER);
 <HNUMBER>{float}     p.hnumber = atof(yytext);
@@ -120,7 +105,8 @@ char tLName[50];
 <IND>,               BEGIN(EMP);
 <EMP>{word}          strcpy(p.emp, yytext);
 <EMP>,               BEGIN(FSCHED);
-<FSCHED>\n           {people[pc++] = p; reaper(&p); BEGIN(0);}
+<FSCHED>\n           {people[pc++] = p; initPerson(&p); BEGIN(0);}
+.                    ;
 
 %%
 main() {
@@ -139,27 +125,43 @@ main() {
 void putInBucket(char place[], hMap *bp) {
   int i;
   for(i=0; i<bp->count; i++) {
-    if(strcmp(place, bp->places[i])) {
+    if(strcmp(place, bp->places[i]) == 0) {
       bp->freq[i]++;
       break;
     }
   }
   if(i==bp->count) {
     strcpy(bp->places[i], place);
+    bp->freq[i] = 1;
     bp->count++;
   }
 }
 
-void reaper(person *per) {
-  int tHNum, tDNum, tFNum;
-  char tLName[50];
-  tHNum = per->hnumber;
-  tDNum = per->dnumber;
-  tFNum = per->fnumber;
-  strcpy(tLName, per->lname); 
-  *per = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
-  per->hnumber = tHNum;
-  per->dnumber = tDNum;
-  per->fnumber = tFNum;
-  strcpy(per->lname, tLName);
+void initPerson(person *per) {
+  per->line = 0;
+  per->fname[0] = '\0';
+  per->relate[0] = '\0';
+  per->own = 0;
+  per->forr = 0;
+  per->sex = '\0';
+  per->race = '\0';
+  per->age = 0;
+  per->month = 0;
+  per->marital = '\0';
+  per->immYear = 0;
+  per->nat = 0;
+  per->natYear = 0;
+  per->attSch = 0;
+  per->read = 0;
+  per->write = 0;
+  per->bPlace[0] = '\0';
+  per->lang[0] = '\0';
+  per->fPlace[0] = '\0';
+  per->fLang[0] = '\0';
+  per->mPlace[0] = '\0';
+  per->mLang[0] = '\0';
+  per->eng = 0;
+  per->prof[0] = '\0';
+  per->ind[0] = '\0';
+  per->emp[0] = '\0';
 }
