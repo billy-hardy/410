@@ -128,15 +128,17 @@ main() {
   int i;
   for(i=0; i<pc; i++) {
     putInBucket(people[i].bPlace, &birthPlaces);
-    if(people[i].age < 5) {
+    if(people[i].age <= 5) {
       collectAges(people[i].age, people[i].month, &ages);
     }
   }
+  printf("Birth Places:\n");
   for(i=0; i<birthPlaces.count; i++) {
     printf("%s: %i\n", birthPlaces.places[i], birthPlaces.freq[i]);
   }
+  printf("\nNumber of kids 5 or under:\n");
   for(i=0; i<ages.count; i++) {
-      printf("%i years %i months: %i\n", ages.year[i], ages.month[i], ages.freq[i]);
+    printf("%i years %i months: %i\n", ages.year[i], ages.month[i], ages.freq[i]);
   }
   int wivesEmployed=0, headsRR=0, notAllRRs=0, j, headCount=0;
   person *head, *neighbor, wife;
@@ -163,9 +165,9 @@ main() {
       headCount++;
     }
   }
-  printf("There are %i households with the head of households being a railroader and all neighbor heads of households also being railroaders.\n", headsRR);
-  printf("There are %i households with the head of households being a railroader and at least one, but not all, neighbor head of household not a railroader.\n", notAllRRs);
-  printf("There are %i households with the head of household being a railroader and no neighbor head of household a railroader.\n", headCount-headsRR-notAllRRs);
+  printf("\nThere are %i households with the head of households being a railroader and all neighbor heads of households also being railroaders.\n", headsRR);
+  printf("\nThere are %i households with the head of households being a railroader and at least one, but not all, neighbor head of household not a railroader.\n", notAllRRs);
+  printf("\nThere are %i households with the head of household being a railroader and no neighbor head of household a railroader.\n", headCount-headsRR-notAllRRs);
   for(i=0; i<pc; i++) {
     wife = people[i];
     if(strcmp(wife.relate, "wife") == 0) {
@@ -175,7 +177,7 @@ main() {
       }
     }
   }
-  printf("There are %i wives employed.\n", wivesEmployed);  
+  printf("\nThere are %i wives employed.\n", wivesEmployed);  
 }
 
 int isRailRoader(char *emp) {
@@ -184,6 +186,8 @@ int isRailRoader(char *emp) {
 
 void collectAges(int year, int month, hMapAges *ages) {
   int i;
+  if(year == 0 && month == -1)
+    return;
   for(i=0; i<ages->count; i++) {
     if(year == ages->year[i] && month == ages->month[i]) {
       ages->freq[i]++;
@@ -192,7 +196,7 @@ void collectAges(int year, int month, hMapAges *ages) {
   }
   if(i == ages->count) {
     ages->year[i] = year;
-    ages->month[i] = month;
+    ages->month[i] = (month>=0)?month:0;
     ages->freq[i] = 1;
     ages->count++;
   }
