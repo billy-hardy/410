@@ -1,6 +1,6 @@
 letter   [A-Za-z]
 word     {letter}+
-words    {word}*\ *{word}+
+words    ({word}*\ *)*{word}+
 comma    [,]
 d        [0-9]
 number   {d}+
@@ -77,7 +77,8 @@ int pc = 0;
 <RACE>{letter}       p.race = yytext[0];
 <RACE>,              BEGIN(AGE);
 <AGE>\"\"            BEGIN(UNDER6);
-<AGE>{d}+/\"         p.age = atoi(yytext);
+<AGE>{d}+            p.age = atoi(yytext);
+<UNDER6>"/12"        ;
 <UNDER6>{d}/"-"      p.age = atoi(yytext);
 <UNDER6>{d}+/"/12"   p.month = atoi(yytext);
 <AGE,UNDER6>,        BEGIN(MARITAL);
@@ -140,23 +141,24 @@ main() {
   for(i=0; i<ages.count; i++) {
     printf("%i years %i months: %i\n", ages.year[i], ages.month[i], ages.freq[i]);
   }
-  int wivesEmployed=0, headsRR=0, notAllRRs=0, j, headCount=0;
+  int wivesEmployed=0, headsRR=0, notAllRRs=0, j, headCount=0, neighRRCount, neighCount;
   person *head, *neighbor, wife;
   for(i=0; i<pc; i++) {
     head = &people[i];
-    if(strcmp(head->relate, "head") == 0 && isRailRoader(head->emp)) {
-      int neighCount=0, neighRRCount=0;
+    if(strcmp(head->relate, "head") == 0 && isRailRoader(head->ind)) {
+      neighCount=0, neighRRCount=0;
       for(j=0; j<pc; j++) {
         neighbor = &people[j];
         if(neighbor->hnumber < head->hnumber+4 && neighbor->hnumber > head->hnumber-4) {
           if(strcmp(neighbor->relate, "head") == 0) {
-	    if(isRailRoader(neighbor->emp)) {
+	    if(isRailRoader(neighbor->ind)) {
 	      neighRRCount++;
   	    }
 	    neighCount++;
 	  }
         }
       }
+
       if(neighCount == neighRRCount) {
         headsRR++;
       } else {
@@ -171,8 +173,7 @@ main() {
   for(i=0; i<pc; i++) {
     wife = people[i];
     if(strcmp(wife.relate, "wife") == 0) {
-      if(strlen(wife.prof) != 0 && strcmp(wife.prof, "None") != 0) {
-        printf("%s ", wife.prof);
+      if(strlen(wife.emp) != 0) {
         wivesEmployed++;
       }
     }
@@ -181,7 +182,9 @@ main() {
 }
 
 int isRailRoader(char *emp) {
-  return !(strcmp(emp, "Steam Rairoad") && strcmp(emp, "Railroad shop") && strcmp(emp, "Railroad yard"));
+  if(strcmp(emp, "Steam Rairoad") && strcmp(emp, "Railroad shop") && strcmp(emp, "Railroad yard")) {
+    return 0;
+  } else return 1;
 }
 
 void collectAges(int year, int month, hMapAges *ages) {
