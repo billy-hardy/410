@@ -7,7 +7,7 @@ number   {d}+
 float    {d}+\.{d}+
 year     {d}{4}
 
-%s HNUMBER DNUMBER FNUMBER LNAME FNAME RELATE OWN FORR SEX RACE AGE MARITAL IMMYEAR NAT NATYEAR ATTSCH READ WRITE BPLACE LANG FPLACE FLANG MPLACE MLANG ENG PROF IND EMP FSCHED
+%s HNUMBER DNUMBER FNUMBER LNAME FNAME RELATE OWN FORR SEX RACE AGE UNDER6 MARITAL IMMYEAR NAT NATYEAR ATTSCH READ WRITE BPLACE LANG FPLACE FLANG MPLACE MLANG ENG PROF IND EMP FSCHED
 
 %{
 #include <stdio.h>
@@ -33,9 +33,18 @@ typedef struct {
   char places[100][100];
   int freq[100];
   int count;
-} hMap;
+} hMapBP;
 
-void putInBucket(char[], hMap *);
+typedef struct {
+  int year[100];
+  int month[100];
+  int freq[100];
+  int count;
+} hMapAges;
+
+int isRailRoader(char *);
+void collectAges(int, int, hMapAges *);
+void putInBucket(char[], hMapBP *);
 void initPerson(person *);
 
 person p;
@@ -45,8 +54,7 @@ int pc = 0;
 %}
 
 %%
-\"                   ;
-<INITIAL>{number}    p.line = atoi(yytext);
+<INITIAL>{number}    {initPerson(&p); p.line = atoi(yytext);}
 <INITIAL>,           BEGIN(HNUMBER);
 <HNUMBER>{float}     p.hnumber = atof(yytext);
 <HNUMBER>,           BEGIN(DNUMBER);
@@ -68,9 +76,11 @@ int pc = 0;
 <SEX>,               BEGIN(RACE);
 <RACE>{letter}       p.race = yytext[0];
 <RACE>,              BEGIN(AGE);
-<AGE>age             p.age = atoi(yytext);
-<AGE>{d}+/[\/12]     p.month = atoi(yytext);
-<AGE>,               BEGIN(MARITAL);
+<AGE>\"\"            BEGIN(UNDER6);
+<AGE>{d}+/\"         p.age = atoi(yytext);
+<UNDER6>{d}/"-"      p.age = atoi(yytext);
+<UNDER6>{d}+/"/12"   p.month = atoi(yytext);
+<AGE,UNDER6>,        BEGIN(MARITAL);
 <MARITAL>{letter}    p.marital = yytext[0];
 <MARITAL>,           BEGIN(IMMYEAR);
 <IMMYEAR>{year}      p.immYear = atoi(yytext);
@@ -105,24 +115,90 @@ int pc = 0;
 <IND>,               BEGIN(EMP);
 <EMP>{word}          strcpy(p.emp, yytext);
 <EMP>,               BEGIN(FSCHED);
-<FSCHED>\n           {people[pc++] = p; initPerson(&p); BEGIN(0);}
+<FSCHED>\n           {people[pc++] = p; BEGIN(0);}
 .                    ;
 
 %%
 main() {
   yylex();
-  hMap birthPlaces;
+  hMapBP birthPlaces;
   birthPlaces.count = 0;
+  hMapAges ages;
+  ages.count = 0;
   int i;
   for(i=0; i<pc; i++) {
     putInBucket(people[i].bPlace, &birthPlaces);
+    if(people[i].age < 5) {
+      collectAges(people[i].age, people[i].month, &ages);
+    }
   }
   for(i=0; i<birthPlaces.count; i++) {
     printf("%s: %i\n", birthPlaces.places[i], birthPlaces.freq[i]);
-  } 
+  }
+  for(i=0; i<ages.count; i++) {
+      printf("%i years %i months: %i\n", ages.year[i], ages.month[i], ages.freq[i]);
+  }
+  int wivesEmployed=0, headsRR=0, notAllRRs=0, j, headCount=0;
+  person *head, *neighbor, wife;
+  for(i=0; i<pc; i++) {
+    head = &people[i];
+    if(strcmp(head->relate, "head") == 0 && isRailRoader(head->emp)) {
+      int neighCount=0, neighRRCount=0;
+      for(j=0; j<pc; j++) {
+        neighbor = &people[j];
+        if(neighbor->hnumber < head->hnumber+4 && neighbor->hnumber > head->hnumber-4) {
+          if(strcmp(neighbor->relate, "head") == 0) {
+	    if(isRailRoader(neighbor->emp)) {
+	      neighRRCount++;
+  	    }
+	    neighCount++;
+	  }
+        }
+      }
+      if(neighCount == neighRRCount) {
+        headsRR++;
+      } else {
+        notAllRRs++;
+      }
+      headCount++;
+    }
+  }
+  printf("There are %i households with the head of households being a railroader and all neighbor heads of households also being railroaders.\n", headsRR);
+  printf("There are %i households with the head of households being a railroader and at least one, but not all, neighbor head of household not a railroader.\n", notAllRRs);
+  printf("There are %i households with the head of household being a railroader and no neighbor head of household a railroader.\n", headCount-headsRR-notAllRRs);
+  for(i=0; i<pc; i++) {
+    wife = people[i];
+    if(strcmp(wife.relate, "wife") == 0) {
+      if(strlen(wife.prof) != 0 && strcmp(wife.prof, "None") != 0) {
+        printf("%s ", wife.prof);
+        wivesEmployed++;
+      }
+    }
+  }
+  printf("There are %i wives employed.\n", wivesEmployed);  
 }
 
-void putInBucket(char place[], hMap *bp) {
+int isRailRoader(char *emp) {
+  return !(strcmp(emp, "Steam Rairoad") && strcmp(emp, "Railroad shop") && strcmp(emp, "Railroad yard"));
+}
+
+void collectAges(int year, int month, hMapAges *ages) {
+  int i;
+  for(i=0; i<ages->count; i++) {
+    if(year == ages->year[i] && month == ages->month[i]) {
+      ages->freq[i]++;
+      break;
+    }
+  }
+  if(i == ages->count) {
+    ages->year[i] = year;
+    ages->month[i] = month;
+    ages->freq[i] = 1;
+    ages->count++;
+  }
+}
+
+void putInBucket(char place[], hMapBP *bp) {
   int i;
   for(i=0; i<bp->count; i++) {
     if(strcmp(place, bp->places[i]) == 0) {
@@ -146,7 +222,7 @@ void initPerson(person *per) {
   per->sex = '\0';
   per->race = '\0';
   per->age = 0;
-  per->month = 0;
+  per->month = -1;
   per->marital = '\0';
   per->immYear = 0;
   per->nat = 0;
