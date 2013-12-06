@@ -8,8 +8,11 @@ class Env < Hash
 end
 
 def display(list)
-  display_rec(list)
-  puts ""
+  if list.is_a? Array
+    display_rec(list)
+    puts ""
+  end
+  list
 end
 
 def display_rec(list, indent=0)
@@ -26,21 +29,23 @@ def display_rec(list, indent=0)
     end
   end
   print ")"
+  list
 end
 
-def my_reduce(x)
-
+def my_reduce(op, args)
+  args.inject{|acc, n| acc.send(op, n)}
 end
 
 def add_globals(env)
   ops = [:+, :-, :*, :/, :>, :<, :>=, :<=, :==]
-  ops.each{|op|  env[op] = lambda{|*x| x[1..-1].inject{|sum, n| sum.send(x[0], n)}}}
+  ops.each{|op|  env[op] = lambda{|*x| x.inject{|acc, n| acc.send(op, n)}}}
   env.update({ :length => lambda{|x| x.length}, :cons => lambda{|x, y| [x]+y},
                :car => lambda{|x| x[0]}, :cdr => lambda{|x| x[1..-1]},
                :append => lambda{|x,y| x+y}, :list => lambda{|*xs| xs},
                :list? => lambda{|x| x.is_a? Array}, :null? => lambda{|x| x==nil},
                :symbol? => lambda{|x| x.is_a? Symbol}, :not => lambda{|x| !x},
-               :display => lambda{|x| display(x)}, :reduce => lambda{|x| my_reduce(x)}})
+               :display => lambda{|x| display(x)},
+               :reduce => lambda{|func, list| list.inject{|acc, n| acc.send(func, n)}}})
 end
 
 def eval(x, env)
@@ -84,11 +89,14 @@ def repl(env)
     begin
       print "risp>"
       code = parse(gets.chomp)
-      ret = eval(code, env)
-      unless ret == nil
-        puts "==> " + ret.to_s
-      else
-        puts "==> nil"
+      unless code == nil
+        ret = eval(code, env)
+        print "==> " 
+        if ret == nil or ret == []
+          puts "nil"
+        else
+          display(ret)
+        end
       end
 #    rescue NoMethodError => e
 #      puts e.to_s
